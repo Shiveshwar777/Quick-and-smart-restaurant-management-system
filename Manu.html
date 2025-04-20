@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Menu</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .card {
+      border: 1px solid #ccc;
+      padding: 15px;
+      margin: 10px;
+      border-radius: 8px;
+      width: 200px;
+    }
+    .menu-container {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .add-form {
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <header><h1>Food Menu</h1></header>
+  <nav>
+    <a href="index.html">Home</a> | 
+    <a href="cart.html">Go to Cart</a>
+  </nav>
+
+  <section class="section">
+    <div class="menu-container" id="menu">
+      <!-- Menu items added dynamically -->
+    </div>
+
+    <div class="add-form">
+      <h3>Add New Food Item</h3>
+      <input type="text" id="newName" placeholder="Name (e.g., 🧁 Cupcake)">
+      <input type="number" id="newPrice" placeholder="Price (e.g., 129)">
+      <button onclick="addNewItem()">Add Item</button>
+    </div>
+  </section>
+
+  <footer>&copy; 2025 Quick & Smart Restaurant</footer>
+
+  <script>
+    let menuItems = [
+      { name: "🍕 Pizza", price: 299 },
+      { name: "🍔 Burger", price: 199 },
+      { name: "🥗 Salad", price: 149 },
+      { name: "🍝 Pasta", price: 249 },
+      { name: "🍛 Biryani", price: 199 },
+      { name: "🍩 Donut", price: 99 },
+      { name: "🥤 Soft Drink", price: 79 },
+      { name: "🍜 Noodles", price: 159 },
+      { name: "🍣 Sushi", price: 399 },
+      { name: "🧁 Cupcake", price: 129 },
+    ];
+
+    function renderMenu() {
+      const menu = document.getElementById("menu");
+      menu.innerHTML = "";
+      menuItems.forEach((item, index) => {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.innerHTML = `${item.name} - ₹${item.price} <br>
+                         <button onclick="addToCart(${index})">Add to Cart</button>`;
+        menu.appendChild(div);
+      });
+    }
+
+    function addToCart(index) {
+      let cart = JSON.parse(localStorage.getItem("cart")) || [];
+      let item = menuItems[index];
+
+      let existing = cart.find(ci => ci.name === item.name);
+      if (existing) {
+        existing.qty++;
+      } else {
+        cart.push({ name: item.name, price: item.price, qty: 1 });
+      }
+
+      localStorage.setItem("cart", JSON.stringify(cart));
+      alert(`${item.name} added to cart!`);
+    }
+
+    function addNewItem() {
+      const name = document.getElementById("newName").value.trim();
+      const price = parseInt(document.getElementById("newPrice").value);
+
+      if (name && price) {
+        menuItems.push({ name, price });
+        renderMenu();
+        document.getElementById("newName").value = "";
+        document.getElementById("newPrice").value = "";
+      } else {
+        alert("Please enter both name and valid price.");
+      }
+    }
+
+    renderMenu();
+  </script>
+</body>
+</html>
