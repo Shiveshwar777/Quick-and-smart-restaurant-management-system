@@ -3,16 +3,168 @@
 <head>
   <title>Payments</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    .card {
+      border: 1px solid #ccc;
+      padding: 20px;
+      margin: 20px auto;
+      border-radius: 10px;
+      max-width: 700px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+    th, td {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f4f4f4;
+    }
+    .summary {
+      font-weight: bold;
+      text-align: right;
+    }
+    .form-container {
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      padding: 8px;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+  </style>
 </head>
 <body>
   <header><h1>Payment Summary</h1></header>
   <nav><a href="index.html">Home</a></nav>
+
   <section class="section">
-    <div class="card" id="paymentSummary">
-      <!-- JS will fill this -->
+    <!-- Selection and Inputs -->
+    <div class="form-container">
+      <label><strong>Select Order Type:</strong></label>
+      <label><input type="radio" name="orderType" value="delivery" checked onchange="toggleInputFields()"> Delivery</label>
+      <label><input type="radio" name="orderType" value="dinein" onchange="toggleInputFields()"> Dine-in</label>
+
+      <div class="form-group">
+        <label for="enteredDiscountId">Enter Discount ID (if any):</label>
+        <input type="text" id="enteredDiscountId" placeholder="e.g. DISC10">
+      </div>
+      
+      <div id="deliveryInput">
+        <label for="deliveryId">Enter Delivery ID:</label>
+        <input type="text" id="deliveryId" placeholder="Enter your Delivery ID">
+      </div>
+
+      <div id="tableInput" style="display: none;">
+        <label for="tableNumber">Enter Table Number:</label>
+        <input type="text" id="tableNumber" placeholder="Enter your Table Number">
+      </div>
+
+      <button onclick="loadPaymentDetails()">Load Payment Details</button>
     </div>
+
+    <!-- Payment Summary -->
+    <div class="card" id="paymentSummary">Waiting for input...</div>
+
+    <!-- Delivery or Dine-in Cart -->
+    <div class="card" id="orderDetails">Order items will appear here...</div>
   </section>
+
   <footer>&copy; 2025 Quick & Smart Restaurant</footer>
-  <script src="script.js"></script>
+
+  <script>
+  function toggleInputFields() {
+    const type = document.querySelector('input[name="orderType"]:checked').value;
+    document.getElementById("deliveryInput").style.display = (type === "delivery") ? "block" : "none";
+    document.getElementById("tableInput").style.display = (type === "dinein") ? "block" : "none";
+  }
+
+  function loadPaymentDetails() {
+    const type = document.querySelector('input[name="orderType"]:checked').value;
+    let identifier = "";
+    if (type === "delivery") {
+      identifier = document.getElementById("deliveryId").value.trim();
+      if (!identifier) return alert("Please enter Delivery ID.");
+    } else {
+      identifier = document.getElementById("tableNumber").value.trim();
+      if (!identifier) return alert("Please enter Table Number.");
+    }
+
+    // Load cart
+    const cart = (type === "dinein") ?
+      JSON.parse(localStorage.getItem(`dinein_cart_table_${identifier}`)) || [] :
+      JSON.parse(localStorage.getItem("cart")) || [];
+
+    const orderDiv = document.getElementById("orderDetails");
+    if (cart.length === 0) {
+      orderDiv.innerHTML = "<p>No items found for this order.</p>";
+      return;
+    }
+
+    // Calculate subtotal
+    let html = "<table><tr><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>";
+    let subtotal = 0;
+    cart.forEach(item => {
+      const total = item.qty * item.price;
+      subtotal += total;
+      html += <tr><td>${item.name}</td><td>${item.qty}</td><td>₹${item.price}</td><td>₹${total}</td></tr>;
+    });
+
+    const tax = Math.round(subtotal * 0.10);
+    let totalBeforeDiscount = subtotal + tax;
+
+    // Apply discount
+    const enteredDiscountId = document.getElementById("enteredDiscountId").value.trim();
+    let discountPercent = 0;
+
+    const storedDiscounts = JSON.parse(localStorage.getItem("discounts")) || {};
+    if (enteredDiscountId && storedDiscounts[enteredDiscountId]) {
+      discountPercent = parseInt(storedDiscounts[enteredDiscountId].percentage) || 0;
+    }
+
+    const discountAmount = Math.round(totalBeforeDiscount * (discountPercent / 100));
+    const finalTotal = totalBeforeDiscount - discountAmount;
+
+    html += <tr><td colspan="3" class="summary">Subtotal</td><td>₹${subtotal}</td></tr>;
+    html += <tr><td colspan="3" class="summary">Tax (10%)</td><td>₹${tax}</td></tr>;
+    if (discountPercent > 0) {
+      html += <tr><td colspan="3" class="summary">Discount (${discountPercent}%)</td><td>-₹${discountAmount}</td></tr>;
+    }
+    html += <tr><td colspan="3" class="summary"><strong>Total</strong></td><td><strong>₹${finalTotal}</strong></td></tr>;
+    html += "</table>";
+
+    orderDiv.innerHTML = html;
+
+    // Payment Summary (static or preloaded)
+    const summaryDiv = document.getElementById("paymentSummary");
+    summaryDiv.innerHTML = `<table>
+      <tr><th>Payment ID</th><td>${localStorage.getItem('paymentId') || 'Not Available'}</td></tr>
+      <tr><th>Order No</th><td>${localStorage.getItem('orderNo') || 'Not Available'}</td></tr>
+      <tr><th>Net Price</th><td>₹${subtotal}</td></tr>
+      <tr><th>Tax</th><td>₹${tax}</td></tr>
+      <tr><th>Discount</th><td>${discountPercent > 0 ? discountPercent + '%' : 'N/A'}</td></tr>
+      <tr><th>Total Payable</th><td><strong>₹${finalTotal}</strong></td></tr>
+    </table>`;
+  }
+
+  window.onload = toggleInputFields;
+</script>
+
 </body>
 </html>

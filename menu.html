@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Menu</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .search-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .search-bar input {
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: none;
+      width: 200px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Food Menu</h1>
+  </header>
+
+  <nav>
+    <a href="index.html">Home</a> | 
+    <a href="cart.html">Go to Cart</a>
+  </nav>
+
+  <section class="section">
+    <div class="search-bar">
+      <input type="text" id="searchInput" placeholder="Search food..." oninput="filterMenu()">
+    </div>
+
+    <div class="menu-container" id="menu"></div>
+
+    <form class="add-form" onsubmit="addMenuItem(); return false;">
+      <h3>Add New Menu Item</h3>
+    
+      <input type="number" id="newMenuId" placeholder="Menu ID (e.g., 101)">
+      <input type="text" id="newCategory" placeholder="Category (e.g., Drinks)">
+      <input type="text" id="newFoodName" placeholder="Food Name (e.g., 🥤 Soft Drink)">
+      <input type="number" id="newFoodPrice" placeholder="Price (e.g., 79)">
+    
+      <button type="submit">Add Menu Item</button>
+    </form>
+    
+  </section>
+
+  <footer>&copy; 2025 Quick & Smart Restaurant</footer>
+
+  <script>
+    let menuItems = [
+      { foodId: 1, menuId: 101, name: "🍕 Pizza", price: 299 },
+      { foodId: 2, menuId: 101, name: "🍔 Burger", price: 199 },
+      { foodId: 3, menuId: 101, name: "🥗 Salad", price: 149 },
+      { foodId: 4, menuId: 101, name: "🍝 Pasta", price: 249 },
+      { foodId: 5, menuId: 101, name: "🍛 Biryani", price: 199 },
+      { foodId: 6, menuId: 102, name: "🍩 Donut", price: 99 },
+      { foodId: 7, menuId: 102, name: "🥤 Soft Drink", price: 79 },
+      { foodId: 8, menuId: 102, name: "🍜 Noodles", price: 159 },
+      { foodId: 9, menuId: 102, name: "🍣 Sushi", price: 399 },
+      { foodId: 10, menuId: 103, name: "🧁 Cupcake", price: 129 },
+    ];
+
+    function filterMenu() {
+      const searchQuery = document.getElementById("searchInput").value.toLowerCase();
+      if (searchQuery === "") {
+        renderMenu(menuItems);
+        return;
+      }
+      const filteredMenu = menuItems.filter(item => item.name.toLowerCase().includes(searchQuery));
+      renderMenu(filteredMenu);
+    }
+
+    function renderMenu(items = menuItems) {
+  const menu = document.getElementById("menu");
+  menu.innerHTML = "";
+
+  items.forEach((item, index) => {
+    const div = document.createElement("div");
+    div.className = "card";
+    div.innerHTML = `${item.name} - ₹${item.price}<br>
+                     <small>Food ID: ${item.foodId}, Menu ID: ${item.menuId}</small><br>
+                     <button onclick="addToCart(${index})">Add to Cart</button>`;
+    menu.appendChild(div);
+  });
+}
+
+function addToCart(index) {
+  let cart = JSON.parse(localStorage.getItem("cart")) || [];
+  let item = menuItems[index];
+  let existing = cart.find(ci => ci.name === item.name);
+
+  if (existing) {
+    existing.qty++;
+  } else {
+    cart.push({ name: item.name, price: item.price, qty: 1, foodId: item.foodId });
+  }
+
+  localStorage.setItem("cart", JSON.stringify(cart));
+  alert(`${item.name} added to cart!`);
+}
+
+
+function addMenuItem() {
+  const menuId = parseInt(document.getElementById("newMenuId").value);
+  const category = document.getElementById("newCategory").value.trim();
+  const foodName = document.getElementById("newFoodName").value.trim();
+  const foodPrice = parseFloat(document.getElementById("newFoodPrice").value);
+
+  if (isNaN(menuId) || !category || !foodName || isNaN(foodPrice)) {
+    alert("Please fill all fields correctly.");
+    return;
+  }
+
+  const newMenuItem = { menuId, category };
+
+  // Send only menuId and category to database
+  fetch("http://localhost:3000/api/menu", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(newMenuItem)
+  })
+    .then(res => res.json())
+    .then(data => {
+      alert(data.message);
+
+      // Add to local menuItems array (Name + Price)
+      const newFoodItem = {
+        foodId: Date.now(),    // Temporary unique ID
+        menuId: menuId,
+        name: foodName,
+        price: foodPrice       // Save price here
+      };
+
+      menuItems.push(newFoodItem);
+
+      // Re-render menu
+      renderMenu();
+
+      // Clear inputs
+      document.getElementById("newMenuId").value = "";
+      document.getElementById("newCategory").value = "";
+      document.getElementById("newFoodName").value = "";
+      document.getElementById("newFoodPrice").value = "";
+    })
+    .catch(err => {
+      console.error("Error adding menu item:", err);
+      alert("Failed to add menu item.");
+    });
+}
+
+window.onload = () => {
+  const role = localStorage.getItem("role");
+  if (role !== "admin") {
+    document.querySelector(".add-form").style.display = "none";
+  }
+};
+
+
+    renderMenu();
+  </script>
+</body>
+</html>
